@@ -1,30 +1,61 @@
-<script setup>
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <MainLayout v-if="isAuthenticated">
+    <router-view />
+  </MainLayout>
+  <router-view v-else />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<script setup>
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import MainLayout from './components/layout/MainLayout.vue'
+
+const router = useRouter()
+const isAuthenticated = ref(false)
+
+const checkAuth = () => {
+  // Cek multiple possible token names untuk compatibility
+  const token = localStorage.getItem('auth_token') || 
+                localStorage.getItem('token') || 
+                localStorage.getItem('user_token')
+  
+  isAuthenticated.value = !!token
+  console.log('Auth check:', { isAuthenticated: isAuthenticated.value, token })
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+// Handle storage events (when localStorage changes in other tabs)
+const handleStorageChange = (event) => {
+  if (event.key === 'auth_token' || event.key === 'token') {
+    checkAuth()
+  }
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+// Handle custom event untuk sign out dari komponen lain
+const handleSignOutEvent = () => {
+  checkAuth()
 }
-</style>
+
+onMounted(() => {
+  checkAuth()
+  
+  // Listen untuk storage changes (other tabs)
+  window.addEventListener('storage', handleStorageChange)
+  
+  // Listen untuk custom event dari komponen lain
+  window.addEventListener('signOut', handleSignOutEvent)
+  
+  // Initial check
+  checkAuth()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('storage', handleStorageChange)
+  window.removeEventListener('signOut', handleSignOutEvent)
+})
+
+// Watch route changes
+watch(() => router.currentRoute.value.path, (newPath) => {
+  console.log('Route changed to:', newPath)
+  checkAuth()
+})
+</script>
