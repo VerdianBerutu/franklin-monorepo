@@ -2,6 +2,14 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import './style.css'
-// HAPUS BARIS INI: import '@fortunezone/fortunezone-free/css/all.css'
+import permissionDirective from './directives/permission'
 
-createApp(App).use(router).mount('#app')
+// ✅ BUAT app instance dulu
+const app = createApp(App)
+
+// ✅ REGISTRASI semua plugin & directive SEBELUM mount
+app.use(router)
+app.directive('permission', permissionDirective)
+
+// ✅ MOUNT terakhir
+app.mount('#app')

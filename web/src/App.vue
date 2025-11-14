@@ -14,18 +14,26 @@ const router = useRouter()
 const isAuthenticated = ref(false)
 
 const checkAuth = () => {
-  // Cek multiple possible token names untuk compatibility
+  // ✅ PERBAIKI: Cek token DAN user data untuk consistency
   const token = localStorage.getItem('auth_token') || 
                 localStorage.getItem('token') || 
                 localStorage.getItem('user_token')
   
-  isAuthenticated.value = !!token
-  console.log('Auth check:', { isAuthenticated: isAuthenticated.value, token })
+  const user = localStorage.getItem('user')
+  
+  // ✅ PERBAIKI: Harus ada token DAN user data
+  isAuthenticated.value = !!token && !!user
+  
+  console.log('Auth check:', { 
+    isAuthenticated: isAuthenticated.value, 
+    token: !!token,
+    user: !!user
+  })
 }
 
 // Handle storage events (when localStorage changes in other tabs)
 const handleStorageChange = (event) => {
-  if (event.key === 'auth_token' || event.key === 'token') {
+  if (event.key === 'auth_token' || event.key === 'token' || event.key === 'user') {
     checkAuth()
   }
 }
@@ -43,9 +51,6 @@ onMounted(() => {
   
   // Listen untuk custom event dari komponen lain
   window.addEventListener('signOut', handleSignOutEvent)
-  
-  // Initial check
-  checkAuth()
 })
 
 onUnmounted(() => {
@@ -56,6 +61,22 @@ onUnmounted(() => {
 // Watch route changes
 watch(() => router.currentRoute.value.path, (newPath) => {
   console.log('Route changed to:', newPath)
-  checkAuth()
+  // ✅ PERBAIKI: Delay sedikit untuk pastikan auth state updated
+  setTimeout(() => {
+    checkAuth()
+  }, 100)
+})
+
+// ✅ TAMBAHKAN: Watch untuk localStorage changes secara real-time
+watch(() => localStorage.getItem('auth_token'), (newToken, oldToken) => {
+  if (newToken !== oldToken) {
+    checkAuth()
+  }
+})
+
+watch(() => localStorage.getItem('user'), (newUser, oldUser) => {
+  if (newUser !== oldUser) {
+    checkAuth()
+  }
 })
 </script>

@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DashboardPage from '../pages/auth/DashboardPage.vue'
-import LoginPage from '../pages/auth/LoginPage.vue'
 
 const routes = [
+  // ✅ ROOT ROUTE
   {
     path: '/',
     redirect: '/dashboard'
@@ -10,14 +9,51 @@ const routes = [
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: DashboardPage,
-    meta: { requiresAuth: true }
+    component: () => import('@/pages/auth/DashboardPage.vue'), 
+    meta: { requiresAuth: true, permission: 'view dashboard' }
   },
   {
     path: '/login',
     name: 'Login',
-    component: LoginPage,
-    meta: { requiresAuth: false }
+    component: () => import('@/pages/auth/LoginPage.vue'),
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/pages/auth/RegisterPage.vue'),
+    meta: { requiresGuest: true }
+  },
+  // Management Routes
+  {
+    path: '/users',
+    name: 'Users',
+    component: () => import('@/pages/management/UsersPage.vue'),
+    meta: { requiresAuth: true, permission: 'view users' }
+  },
+  {
+    path: '/products',
+    name: 'Products',
+    component: () => import('@/pages/management/ProductsPage.vue'),
+    meta: { requiresAuth: true, permission: 'view products' } // ✅ DIPERBAIKI
+  },
+  {
+    path: '/customers',
+    name: 'Customers',
+    component: () => import('@/pages/management/CustomersPage.vue'),
+    meta: { requiresAuth: true, permission: 'view customers' }
+  },
+  {
+    path: '/sales',
+    name: 'Sales',
+    component: () => import('@/pages/management/SalesPage.vue'),
+    meta: { requiresAuth: true, permission: 'view sales' }
+  },
+  {
+    path: '/certificates',
+    name: 'Certificates',
+    component: () => import('@/pages/management/CertificatesPage.vue'),
+    meta: { requiresAuth: true, permission: 'view certificates' }
   }
 ]
 
@@ -28,15 +64,21 @@ const router = createRouter({
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('auth_token') || localStorage.getItem('token')
+  const hasToken = !!localStorage.getItem('auth_token')
+  const hasUser = !!localStorage.getItem('user')
+  const isLoggedIn = hasToken && hasUser
   
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  if (to.meta.requiresAuth && !isLoggedIn) {
     next('/login')
-  } else if (to.path === '/login' && isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
+    return
   }
+  
+  if (to.meta.requiresGuest && isLoggedIn) {
+    next('/dashboard')
+    return
+  }
+  
+  next()
 })
 
 export default router

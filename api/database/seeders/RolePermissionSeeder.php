@@ -68,6 +68,7 @@ class RolePermissionSeeder extends Seeder
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $staffRole = Role::firstOrCreate(['name' => 'staff']);
         $viewerRole = Role::firstOrCreate(['name' => 'viewer']);
+        $userRole = Role::firstOrCreate(['name' => 'user']); 
 
         // Assign Permissions to Roles
 
@@ -97,6 +98,9 @@ class RolePermissionSeeder extends Seeder
             'view reports',
         ];
         $viewerRole->syncPermissions($viewerPermissions);
+
+        // User - Same permissions as viewer (TAMBAHKAN INI)
+        $userRole->syncPermissions($viewerPermissions);
 
         // Assign roles to existing admin user
         $adminUser = User::find(1);

@@ -26,13 +26,52 @@
 
         <!-- Header -->
         <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">Sign In</h1>
-          <p class="text-gray-600">Enter your email and password to sign in!</p>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Sign Up</h1>
+          <p class="text-gray-600">Enter your email and password to sign up!</p>
         </div>
 
-
-        <!-- Login Form -->
+      
+        
+        <!-- Register Form -->
         <form @submit.prevent="handleSubmit" class="space-y-5">
+          <!-- Name Inputs -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="first-name" class="block text-sm font-medium text-gray-700 mb-2">
+                First Name<span class="text-red-500">*</span>
+              </label>
+              <input
+                id="first-name"
+                v-model="form.first_name"
+                type="text"
+                required
+                placeholder="Enter your first name"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                :class="{ 'border-red-500': errors.first_name }"
+              />
+              <p v-if="errors.first_name" class="mt-1 text-sm text-red-500">
+                {{ errors.first_name }}
+              </p>
+            </div>
+            <div>
+              <label for="last-name" class="block text-sm font-medium text-gray-700 mb-2">
+                Last Name<span class="text-red-500">*</span>
+              </label>
+              <input
+                id="last-name"
+                v-model="form.last_name"
+                type="text"
+                required
+                placeholder="Enter your last name"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                :class="{ 'border-red-500': errors.last_name }"
+              />
+              <p v-if="errors.last_name" class="mt-1 text-sm text-red-500">
+                {{ errors.last_name }}
+              </p>
+            </div>
+          </div>
+
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -43,7 +82,7 @@
               v-model="form.email"
               type="email"
               required
-              placeholder="info@gmail.com"
+              placeholder="Enter your email"
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
               :class="{ 'border-red-500': errors.email }"
             />
@@ -113,19 +152,20 @@
             </p>
           </div>
 
-          <!-- Remember Me & Forgot Password -->
-          <div class="flex items-center justify-between">
-            <label class="flex items-center">
-              <input
-                v-model="form.remember"
-                type="checkbox"
-                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-600">Keep me logged in</span>
+          <!-- Terms and Conditions -->
+          <div class="flex items-start">
+            <input
+              id="agree-terms"
+              v-model="form.agree_terms"
+              type="checkbox"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+            />
+            <label for="agree-terms" class="ml-2 text-sm text-gray-600">
+              By creating an account means you agree to the 
+              <a href="#" class="text-blue-600 hover:text-blue-700">Terms and Conditions</a>, 
+              and our 
+              <a href="#" class="text-blue-600 hover:text-blue-700">Privacy Policy</a>
             </label>
-            <a href="#" class="text-sm text-blue-600 hover:text-blue-700">
-              Forgot password?
-            </a>
           </div>
 
           <!-- Error Message -->
@@ -142,7 +182,7 @@
             :disabled="loading"
             class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span v-if="!loading">Sign In</span>
+            <span v-if="!loading">Sign Up</span>
             <span v-else class="flex items-center justify-center">
               <svg
                 class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -164,16 +204,16 @@
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Signing in...
+              Creating Account...
             </span>
           </button>
         </form>
 
-        <!-- Sign Up Link -->
+        <!-- Sign In Link -->
         <p class="mt-6 text-center text-sm text-gray-600">
-          Don't have an account?
-          <router-link to="/register" class="text-blue-600 hover:text-blue-700 font-medium">
-            Sign Up
+          Already have an account?
+          <router-link to="/login" class="text-blue-600 hover:text-blue-700 font-medium">
+            Sign In
           </router-link>
         </p>
       </div>
@@ -206,8 +246,6 @@
         <p class="text-xl text-gray-300 max-w-md mx-auto">
           YOUR GLOBAL PARTNER FOR INTEGRATED RIGGING AND MOORING SOLUTIONS
         </p>
-
-       
       </div>
     </div>
   </div>
@@ -221,9 +259,11 @@ import axios from 'axios'
 const router = useRouter()
 
 const form = ref({
+  first_name: '',
+  last_name: '',
   email: '',
   password: '',
-  remember: false
+  agree_terms: false
 })
 
 const showPassword = ref(false)
@@ -239,6 +279,14 @@ const handleSubmit = async () => {
   errorMessage.value = ''
 
   // Basic validation
+  if (!form.value.first_name) {
+    errors.value.first_name = 'First name is required'
+    return
+  }
+  if (!form.value.last_name) {
+    errors.value.last_name = 'Last name is required'
+    return
+  }
   if (!form.value.email) {
     errors.value.email = 'Email is required'
     return
@@ -247,20 +295,25 @@ const handleSubmit = async () => {
     errors.value.password = 'Password is required'
     return
   }
+  if (!form.value.agree_terms) {
+    errorMessage.value = 'Please agree to the terms and conditions'
+    return
+  }
 
   loading.value = true
 
   try {
-    console.log('Attempting login to:', `${API_BASE_URL}/login`)
+    console.log('Attempting registration to:', `${API_BASE_URL}/register`)
     
-    const response = await axios.post(`${API_BASE_URL}/login`, {
+    const response = await axios.post(`${API_BASE_URL}/register`, {
+      name: `${form.value.first_name} ${form.value.last_name}`,
       email: form.value.email,
-      password: form.value.password
+      password: form.value.password,
+      password_confirmation: form.value.password
     })
 
-    console.log('Login response:', response.data)
+    console.log('Registration response:', response.data)
 
-    // Cek struktur response yang berbeda
     if (response.data.success || response.data.token) {
       const token = response.data.token || response.data.data?.token
       const user = response.data.user || response.data.data?.user
@@ -272,33 +325,41 @@ const handleSubmit = async () => {
       // Save to localStorage
       localStorage.setItem('auth_token', token)
       localStorage.setItem('user', JSON.stringify(user || {
-        name: 'Admin User',
+        name: `${form.value.first_name} ${form.value.last_name}`,
         email: form.value.email
       }))
       
       // Set axios default header
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       
-      console.log('Login successful, redirecting to dashboard...')
+      console.log('Registration successful, redirecting to dashboard...')
       
       // Redirect ke dashboard
       router.push('/dashboard')
       
     } else {
-      errorMessage.value = response.data.message || 'Login failed'
+      errorMessage.value = response.data.message || 'Registration failed'
     }
     
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Registration error:', error)
     
-    if (error.response?.status === 401) {
-      errorMessage.value = 'Invalid email or password'
+    if (error.response?.data?.errors) {
+      // Handle validation errors from backend
+      const backendErrors = error.response.data.errors
+      if (backendErrors.email) {
+        errorMessage.value = backendErrors.email[0]
+      } else if (backendErrors.password) {
+        errorMessage.value = backendErrors.password[0]
+      } else {
+        errorMessage.value = 'Please check your input and try again.'
+      }
     } else if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message
     } else if (error.request) {
       errorMessage.value = 'Cannot connect to server. Please check if backend is running.'
     } else {
-      errorMessage.value = 'Login failed. Please try again.'
+      errorMessage.value = 'Registration failed. Please try again.'
     }
   } finally {
     loading.value = false
