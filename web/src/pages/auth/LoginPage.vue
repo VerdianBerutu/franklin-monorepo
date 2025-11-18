@@ -30,7 +30,6 @@
           <p class="text-gray-600">Enter your email and password to sign in!</p>
         </div>
 
-
         <!-- Login Form -->
         <form @submit.prevent="handleSubmit" class="space-y-5">
           <!-- Email Input -->
@@ -46,6 +45,7 @@
               placeholder="info@gmail.com"
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
               :class="{ 'border-red-500': errors.email }"
+              :disabled="loading"
             />
             <p v-if="errors.email" class="mt-1 text-sm text-red-500">
               {{ errors.email }}
@@ -66,11 +66,13 @@
                 placeholder="Enter your password"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition pr-10"
                 :class="{ 'border-red-500': errors.password }"
+                :disabled="loading"
               />
               <button
                 type="button"
                 @click="showPassword = !showPassword"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                :disabled="loading"
               >
                 <svg
                   v-if="!showPassword"
@@ -120,6 +122,7 @@
                 v-model="form.remember"
                 type="checkbox"
                 class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                :disabled="loading"
               />
               <span class="ml-2 text-sm text-gray-600">Keep me logged in</span>
             </label>
@@ -131,16 +134,46 @@
           <!-- Error Message -->
           <div
             v-if="errorMessage"
-            class="p-4 bg-red-50 border border-red-200 rounded-lg"
+            class="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start"
           >
+            <svg 
+              class="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" 
+              fill="currentColor" 
+              viewBox="0 0 20 20"
+            >
+              <path 
+                fill-rule="evenodd" 
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" 
+                clip-rule="evenodd" 
+              />
+            </svg>
             <p class="text-sm text-red-600">{{ errorMessage }}</p>
+          </div>
+
+          <!-- Success Message (optional) -->
+          <div
+            v-if="successMessage"
+            class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start"
+          >
+            <svg 
+              class="w-5 h-5 text-green-600 mt-0.5 mr-2 flex-shrink-0" 
+              fill="currentColor" 
+              viewBox="0 0 20 20"
+            >
+              <path 
+                fill-rule="evenodd" 
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
+                clip-rule="evenodd" 
+              />
+            </svg>
+            <p class="text-sm text-green-600">{{ successMessage }}</p>
           </div>
 
           <!-- Submit Button -->
           <button
             type="submit"
             :disabled="loading"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             <span v-if="!loading">Sign In</span>
             <span v-else class="flex items-center justify-center">
@@ -206,8 +239,6 @@
         <p class="text-xl text-gray-300 max-w-md mx-auto">
           YOUR GLOBAL PARTNER FOR INTEGRATED RIGGING AND MOORING SOLUTIONS
         </p>
-
-       
       </div>
     </div>
   </div>
@@ -216,9 +247,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
+const { login } = useAuth()
 
 const form = ref({
   email: '',
@@ -229,79 +261,136 @@ const form = ref({
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 const errors = ref({})
 
-// API Base URL - update this if backend runs on different port
-const API_BASE_URL = 'http://localhost:8000/api'
-
 const handleSubmit = async () => {
+  // Reset messages
   errors.value = {}
   errorMessage.value = ''
+  successMessage.value = ''
 
-  // Basic validation
+  // Client-side validation
   if (!form.value.email) {
     errors.value.email = 'Email is required'
     return
   }
+  
   if (!form.value.password) {
     errors.value.password = 'Password is required'
+    return
+  }
+
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.value.email)) {
+    errors.value.email = 'Please enter a valid email address'
+    return
+  }
+
+  // Password length validation
+  if (form.value.password.length < 6) {
+    errors.value.password = 'Password must be at least 6 characters'
     return
   }
 
   loading.value = true
 
   try {
-    console.log('Attempting login to:', `${API_BASE_URL}/login`)
+    console.log('🔐 Attempting login...')
+    console.log('Email:', form.value.email)
     
-    const response = await axios.post(`${API_BASE_URL}/login`, {
-      email: form.value.email,
-      password: form.value.password
-    })
-
-    console.log('Login response:', response.data)
-
-    // Cek struktur response yang berbeda
-    if (response.data.success || response.data.token) {
-      const token = response.data.token || response.data.data?.token
-      const user = response.data.user || response.data.data?.user
-      
-      if (!token) {
-        throw new Error('No token received from server')
-      }
-      
-      // Save to localStorage
-      localStorage.setItem('auth_token', token)
-      localStorage.setItem('user', JSON.stringify(user || {
-        name: 'Admin User',
-        email: form.value.email
-      }))
-      
-      // Set axios default header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      
-      console.log('Login successful, redirecting to dashboard...')
-      
-      // Redirect ke dashboard
-      router.push('/dashboard')
-      
-    } else {
-      errorMessage.value = response.data.message || 'Login failed'
-    }
+    // ✅ Gunakan composable useAuth untuk login
+    await login(form.value.email, form.value.password)
+    
+    // ✅ Login berhasil
+    successMessage.value = 'Login successful! Redirecting...'
+    console.log('✅ Login successful, redirecting to dashboard...')
+    
+    // ✅ PENTING: Force reload untuk memastikan dashboard ter-refresh dengan data user yang benar
+    setTimeout(() => {
+      window.location.href = '/dashboard'
+    }, 500) // Delay 500ms untuk user melihat success message
     
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('❌ Login error:', error)
     
-    if (error.response?.status === 401) {
-      errorMessage.value = 'Invalid email or password'
-    } else if (error.response?.data?.message) {
-      errorMessage.value = error.response.data.message
+    // Handle berbagai tipe error
+    if (error.response) {
+      // Error dari server (4xx, 5xx)
+      const status = error.response.status
+      const data = error.response.data
+      
+      switch (status) {
+        case 401:
+          errorMessage.value = 'Invalid email or password. Please try again.'
+          break
+        case 422:
+          errorMessage.value = data.message || 'Validation error. Please check your input.'
+          // Handle validation errors
+          if (data.errors) {
+            errors.value = data.errors
+          }
+          break
+        case 429:
+          errorMessage.value = 'Too many login attempts. Please try again later.'
+          break
+        case 500:
+          errorMessage.value = 'Server error. Please try again later.'
+          break
+        default:
+          errorMessage.value = data.message || 'Login failed. Please try again.'
+      }
     } else if (error.request) {
-      errorMessage.value = 'Cannot connect to server. Please check if backend is running.'
+      // Request dibuat tapi tidak ada response
+      errorMessage.value = 'Cannot connect to server. Please check your internet connection or contact administrator.'
+      console.error('No response from server:', error.request)
     } else {
-      errorMessage.value = 'Login failed. Please try again.'
+      // Error lainnya
+      errorMessage.value = error.message || 'An unexpected error occurred. Please try again.'
+      console.error('Error:', error.message)
     }
   } finally {
     loading.value = false
   }
 }
+
+// Optional: Auto-fill untuk development (HAPUS di production!)
+// form.value.email = 'admin@example.com'
+// form.value.password = 'password'
 </script>
+
+<style scoped>
+/* Optional: Custom animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+  animation: shake 0.5s;
+}
+
+/* Smooth transitions */
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Focus styles */
+input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Error state animation */
+.border-red-500 {
+  animation: shake 0.3s;
+}
+</style>
