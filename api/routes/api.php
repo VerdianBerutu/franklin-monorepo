@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// ✅ PUBLIC ROUTES dengan Rate Limiting
+//  PUBLIC ROUTES dengan Rate Limiting
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('api.login');
     Route::post('/register', [AuthController::class, 'register'])->name('api.register');
 });
 
-// ✅ AUTHENTICATED ROUTES
+//  AUTHENTICATED ROUTES
 Route::middleware('auth:sanctum')->group(function () {
     
     // Auth Routes
@@ -70,7 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // SALES MANAGEMENT
     // ===============================================
     Route::prefix('sales')->name('api.sales.')->group(function () {
-        // ⚠️ PENTING: Custom routes SEBELUM resource routes
+        //  PENTING: Custom routes SEBELUM resource routes
         Route::post('/export', [SaleController::class, 'export'])->name('export');
         
         // Standard CRUD
@@ -82,13 +82,16 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     
     // ===============================================
-    // CERTIFICATES MANAGEMENT
+    // CERTIFICATES MANAGEMENT -  
     // ===============================================
     Route::prefix('certificates')->name('api.certificates.')->group(function () {
-        // ⚠️ PENTING: Custom routes SEBELUM resource routes
+        // Custom routes SEBELUM resource-like routes
         Route::get('/expiring', [CertificateController::class, 'expiring'])->name('expiring');
+        Route::get('/my-certificates', [CertificateController::class, 'myCertificates'])->name('my-certificates');
+        Route::get('/{certificate}/download', [CertificateController::class, 'download'])->name('download');
+        Route::get('/{certificate}/preview', [CertificateController::class, 'preview'])->name('preview');
         
-        // Standard CRUD
+        // Standard CRUD routes
         Route::get('/', [CertificateController::class, 'index'])->name('index');
         Route::post('/', [CertificateController::class, 'store'])->name('store');
         Route::get('/{certificate}', [CertificateController::class, 'show'])->name('show');

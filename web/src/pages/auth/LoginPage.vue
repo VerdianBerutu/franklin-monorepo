@@ -150,7 +150,7 @@
             <p class="text-sm text-red-600">{{ errorMessage }}</p>
           </div>
 
-          <!-- Success Message (optional) -->
+          <!-- Success Message -->
           <div
             v-if="successMessage"
             class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start"
@@ -247,10 +247,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import axios from 'axios'
 
 const router = useRouter()
-const { login } = useAuth()
 
 const form = ref({
   email: '',
@@ -298,19 +297,51 @@ const handleSubmit = async () => {
 
   try {
     console.log('🔐 Attempting login...')
-    console.log('Email:', form.value.email)
+    console.log('📧 Email:', form.value.email)
     
-    // ✅ Gunakan composable useAuth untuk login
-    await login(form.value.email, form.value.password)
+    // ✅ PERBAIKAN: Call API login (baseURL sudah include /api)
+    const response = await axios.post('/login', {
+      email: form.value.email,
+      password: form.value.password
+    })
     
-    // ✅ Login berhasil
-    successMessage.value = 'Login successful! Redirecting...'
-    console.log('✅ Login successful, redirecting to dashboard...')
+    console.log('📦 Login Response:', response.data)
     
-    // ✅ PENTING: Force reload untuk memastikan dashboard ter-refresh dengan data user yang benar
-    setTimeout(() => {
-      window.location.href = '/dashboard'
-    }, 500) // Delay 500ms untuk user melihat success message
+    if (response.data.success) {
+      const { token, user } = response.data.data
+      
+      // ✅ PERBAIKAN: Transform data dari backend ke format yang diharapkan frontend
+      const userData = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.roles[0] || 'user', // Ambil role pertama dari array
+        roles: user.roles, // Simpan semua roles (array)
+        permissions: user.permissions || [] // Array permissions dari Spatie
+      }
+      
+      console.log('💾 Saving to localStorage:', {
+        token: token.substring(0, 20) + '...',
+        user: userData
+      })
+      
+      // ✅ Simpan ke localStorage dengan key yang konsisten
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('user', JSON.stringify(userData))
+      
+      // ✅ Verify data tersimpan
+      console.log('✅ Verification:')
+      console.log('  - Token saved:', !!localStorage.getItem('auth_token'))
+      console.log('  - User saved:', !!localStorage.getItem('user'))
+      
+      // ✅ Show success message
+      successMessage.value = 'Login successful! Redirecting...'
+      
+      // ✅ PENTING: Redirect dengan router.push
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
+    }
     
   } catch (error) {
     console.error('❌ Login error:', error)
@@ -320,6 +351,11 @@ const handleSubmit = async () => {
       // Error dari server (4xx, 5xx)
       const status = error.response.status
       const data = error.response.data
+      
+      console.error('Server Error:', {
+        status,
+        data
+      })
       
       switch (status) {
         case 401:
@@ -343,7 +379,7 @@ const handleSubmit = async () => {
       }
     } else if (error.request) {
       // Request dibuat tapi tidak ada response
-      errorMessage.value = 'Cannot connect to server. Please check your internet connection or contact administrator.'
+      errorMessage.value = 'Cannot connect to server. Please check your internet connection.'
       console.error('No response from server:', error.request)
     } else {
       // Error lainnya
@@ -354,14 +390,10 @@ const handleSubmit = async () => {
     loading.value = false
   }
 }
-
-// Optional: Auto-fill untuk development (HAPUS di production!)
-// form.value.email = 'admin@example.com'
-// form.value.password = 'password'
 </script>
 
 <style scoped>
-/* Optional: Custom animations */
+/* Custom animations */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
