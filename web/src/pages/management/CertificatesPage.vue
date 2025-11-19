@@ -115,19 +115,20 @@
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
-              <!-- ✅ CELL DOWNLOAD BARU -->
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <fwb-button 
+                <button 
+                  v-if="certificate.file_path"
                   @click="downloadCertificate(certificate)" 
-                  color="green"
-                  size="xs"
-                  square
-                  class="w-8 h-8 flex items-center justify-center"
+                  :disabled="downloading[certificate.id]"
+                  class="inline-flex items-center justify-center w-8 h-8 text-white bg-green-600 hover:bg-green-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Download"
                 >
-                  <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <i v-if="downloading[certificate.id]" class="fas fa-spinner fa-spin"></i>
+                  <svg v-else class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h0"/>
                   </svg>
-                </fwb-button>
+                </button>
+                <span v-else class="text-gray-400">-</span>
               </td>
             </tr>
           </tbody>
@@ -135,7 +136,7 @@
 
         <!-- Empty State -->
         <div v-if="certificates.length === 0" class="text-center py-12">
-          <svg class="w-12 h-12 text-gray-400 mb-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+          <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
             <path fill-rule="evenodd" d="M9 2.221V7H4.221a2 2 0 0 1 .365-.5L8.5 2.586A2 2 0 0 1 9 2.22ZM11 2v5a2 2 0 0 1-2 2H4v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-7ZM8 16a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H9a1 1 0 0 1-1-1Zm1-5a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H9Z" clip-rule="evenodd"/>
           </svg>
           <p class="text-gray-600">No certificates found</p>
@@ -149,10 +150,19 @@
       </div>
     </div>
 
+    <!-- Certificate Modal -->
+    <CertificateModal
+      v-model="showModal"
+      :certificate="selectedCertificate"
+      @saved="onCertificateSaved"
+      @closed="onModalClosed"
+    />
+
     <!-- Delete Confirmation Modal -->
     <div 
       v-if="showDeleteModal" 
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="resetDeleting"
     >
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6 text-center">
@@ -172,16 +182,19 @@
           <div class="flex gap-3">
             <button
               @click="resetDeleting"
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              :disabled="deleting"
+              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               @click="handleDelete"
-              class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              :disabled="deleting"
+              class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
-              <i class="fas fa-trash mr-2"></i>
-              Delete
+              <i v-if="deleting" class="fas fa-spinner fa-spin mr-2"></i>
+              <i v-else class="fas fa-trash mr-2"></i>
+              {{ deleting ? 'Deleting...' : 'Delete' }}
             </button>
           </div>
         </div>
@@ -191,83 +204,55 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { FwbButton } from 'flowbite-vue'
-
-// Mock service - replace with actual service later
-const certificateService = {
-  async getAll() {
-    // Mock data for now
-    return {
-      data: {
-        data: [
-          {
-            id: 1,
-            name: 'ISO 9001:2015',
-            certificate_number: 'CERT-001-2024',
-            issuing_authority: 'ISO Certification Body',
-            issue_date: '2024-01-15',
-            expiry_date: '2027-01-15',
-            status: 'active'
-          },
-          {
-            id: 2,
-            name: 'OHSAS 18001',
-            certificate_number: 'CERT-002-2024',
-            issuing_authority: 'Safety Standards Authority',
-            issue_date: '2024-03-20',
-            expiry_date: '2025-03-20',
-            status: 'expiring_soon'
-          },
-          {
-            id: 3,
-            name: 'Environmental Compliance',
-            certificate_number: 'CERT-003-2023',
-            issuing_authority: 'Environmental Agency',
-            issue_date: '2023-06-10',
-            expiry_date: '2024-06-10',
-            status: 'expired'
-          }
-        ]
-      }
-    }
-  },
-  async delete(id) {
-    // Mock delete
-    return { success: true }
-  }
-}
+import { ref, reactive, onMounted } from 'vue'
+import { certificateService } from '@/services/certificate'
+import CertificateModal from '@/components/modals/CertificateModal.vue'
 
 // State
 const certificates = ref([])
 const loading = ref(false)
 const error = ref(null)
+const showModal = ref(false)
 const showDeleteModal = ref(false)
+const selectedCertificate = ref(null)
 const deletingCertificate = ref(null)
+const deleting = ref(false)
+const downloading = reactive({})
 
 // Methods
-const downloadCertificate = async (certificate) => {
-  try {
-    console.log(`Downloading certificate: ${certificate.certificate_number}`)
-    alert(`Downloading: ${certificate.name} (${certificate.certificate_number})`)
-  } catch (error) {
-    console.error('Download error:', error)
-    alert('Failed to download certificate')
-  }
-}
-
 const loadCertificates = async () => {
   loading.value = true
   error.value = null
   
   try {
     const response = await certificateService.getAll()
-    certificates.value = response.data.data || []
+    if (response.data.success) {
+      certificates.value = response.data.data.data || []
+    }
   } catch (err) {
     error.value = err.response?.data?.message || 'Failed to load certificates'
     console.error('Error loading certificates:', err)
   } finally {
     loading.value = false
+  }
+}
+
+const downloadCertificate = async (certificate) => {
+  if (!certificate.file_path) {
+    alert('No file available for download')
+    return
+  }
+
+  downloading[certificate.id] = true
+  
+  try {
+    await certificateService.download(certificate)
+    // Success notification could be added here
+  } catch (error) {
+    console.error('Download error:', error)
+    alert(error.response?.data?.message || 'Failed to download certificate')
+  } finally {
+    downloading[certificate.id] = false
   }
 }
 
@@ -284,17 +269,29 @@ const getStatusClass = (status) => {
   const classes = {
     active: 'bg-green-100 text-green-800',
     expiring_soon: 'bg-yellow-100 text-yellow-800',
-    expired: 'bg-red-100 text-red-800'
+    expired: 'bg-red-100 text-red-800',
+    revoked: 'bg-gray-100 text-gray-800'
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
 const openAddModal = () => {
-  alert('Add Certificate modal - Coming soon!')
+  selectedCertificate.value = null
+  showModal.value = true
 }
 
 const openEditModal = (certificate) => {
-  alert(`Edit certificate: ${certificate.name} - Coming soon!`)
+  selectedCertificate.value = { ...certificate }
+  showModal.value = true
+}
+
+const onCertificateSaved = () => {
+  showModal.value = false
+  loadCertificates()
+}
+
+const onModalClosed = () => {
+  selectedCertificate.value = null
 }
 
 const confirmDelete = (certificate) => {
@@ -305,25 +302,34 @@ const confirmDelete = (certificate) => {
 const handleDelete = async () => {
   if (!deletingCertificate.value) return
 
+  deleting.value = true
+
   try {
-    await certificateService.delete(deletingCertificate.value.id)
+    const response = await certificateService.delete(deletingCertificate.value.id)
     
-    // Remove from local array
-    const index = certificates.value.findIndex(c => c.id === deletingCertificate.value.id)
-    if (index > -1) {
-      certificates.value.splice(index, 1)
+    if (response.data.success) {
+      // Remove from local array
+      const index = certificates.value.findIndex(c => c.id === deletingCertificate.value.id)
+      if (index > -1) {
+        certificates.value.splice(index, 1)
+      }
+      
+      alert('Certificate deleted successfully!')
+      resetDeleting()
     }
-    
-    alert('Certificate deleted successfully!')
-    resetDeleting()
   } catch (err) {
+    console.error('Delete error:', err)
     alert(err.response?.data?.message || 'Failed to delete certificate')
+  } finally {
+    deleting.value = false
   }
 }
 
 const resetDeleting = () => {
-  deletingCertificate.value = null
-  showDeleteModal.value = false
+  if (!deleting.value) {
+    deletingCertificate.value = null
+    showDeleteModal.value = false
+  }
 }
 
 // Lifecycle
