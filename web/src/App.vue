@@ -14,42 +14,39 @@ const router = useRouter()
 const isAuthenticated = ref(false)
 
 const checkAuth = () => {
-  // ✅ PERBAIKI: Cek token DAN user data untuk consistency
-  const token = localStorage.getItem('auth_token') || 
-                localStorage.getItem('token') || 
-                localStorage.getItem('user_token')
-  
+  const token = localStorage.getItem('auth_token')
   const user = localStorage.getItem('user')
   
-  // ✅ PERBAIKI: Harus ada token DAN user data
   isAuthenticated.value = !!token && !!user
   
   console.log('Auth check:', { 
     isAuthenticated: isAuthenticated.value, 
-    token: !!token,
-    user: !!user
+    hasToken: !!token,
+    hasUser: !!user,
+    token: token ? token.substring(0, 20) + '...' : null
   })
+  
+  return isAuthenticated.value
 }
 
-// Handle storage events (when localStorage changes in other tabs)
 const handleStorageChange = (event) => {
-  if (event.key === 'auth_token' || event.key === 'token' || event.key === 'user') {
+  if (event.key === 'auth_token' || event.key === 'user') {
+    console.log('Storage changed:', event.key)
     checkAuth()
   }
 }
 
-// Handle custom event untuk sign out dari komponen lain
 const handleSignOutEvent = () => {
+  console.log('Sign out event received')
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('user')
   checkAuth()
+  router.push('/login')
 }
 
 onMounted(() => {
   checkAuth()
-  
-  // Listen untuk storage changes (other tabs)
   window.addEventListener('storage', handleStorageChange)
-  
-  // Listen untuk custom event dari komponen lain
   window.addEventListener('signOut', handleSignOutEvent)
 })
 
@@ -59,24 +56,7 @@ onUnmounted(() => {
 })
 
 // Watch route changes
-watch(() => router.currentRoute.value.path, (newPath) => {
-  console.log('Route changed to:', newPath)
-  // ✅ PERBAIKI: Delay sedikit untuk pastikan auth state updated
-  setTimeout(() => {
-    checkAuth()
-  }, 100)
-})
-
-// ✅ TAMBAHKAN: Watch untuk localStorage changes secara real-time
-watch(() => localStorage.getItem('auth_token'), (newToken, oldToken) => {
-  if (newToken !== oldToken) {
-    checkAuth()
-  }
-})
-
-watch(() => localStorage.getItem('user'), (newUser, oldUser) => {
-  if (newUser !== oldUser) {
-    checkAuth()
-  }
+watch(() => router.currentRoute.value.path, () => {
+  checkAuth()
 })
 </script>

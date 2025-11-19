@@ -58,11 +58,11 @@ const routes = [
     meta: { requiresAuth: true, permission: 'view sales' }
   },
   {
-    path: '/certificates',
-    name: 'Certificates',
-    component: () => import('@/pages/management/CertificatesPage.vue'),
-    meta: { requiresAuth: true, permission: 'view certificates' }
-  },
+  path: '/certificates',
+  name: 'Certificates',
+  component: () => import('@/pages/management/CertificatesPage.vue'),
+  meta: { requiresAuth: true, permission: 'view certificates' }
+},
   //  TAMBAHKAN: 404 Catch-all route
   {
     path: '/:pathMatch(.*)*',

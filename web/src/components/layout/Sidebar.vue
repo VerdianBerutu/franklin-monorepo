@@ -89,24 +89,6 @@
               <span v-if="!isCollapsed" class="ml-3 font-medium">Certificates</span>
             </router-link>
           </li>
-
-          <!-- Upload Files - ✅ GANTI jadi link biasa, tidak pakai router-link -->
-          <li v-permission="'create uploads'">
-            <a href="#" @click.prevent
-               class="nav-item flex items-center px-3 py-3 rounded-lg transition-colors text-gray-700 hover:bg-gray-50">
-              <i class="fas fa-upload text-lg w-6 text-center"></i>
-              <span v-if="!isCollapsed" class="ml-3 font-medium">Upload Files</span>
-            </a>
-          </li>
-          
-          <!-- Presentation/Regulation -->
-          <li>
-            <a href="#" @click.prevent
-               class="nav-item flex items-center px-3 py-3 rounded-lg transition-colors text-gray-700 hover:bg-gray-50">
-              <i class="fas fa-chart-bar text-lg w-6 text-center"></i>
-              <span v-if="!isCollapsed" class="ml-3 font-medium">Presentation/Regulation</span>
-            </a>
-          </li>
         </ul>
       </div>
 
