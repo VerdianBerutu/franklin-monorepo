@@ -20,6 +20,12 @@ const routes = [
     meta: { requiresGuest: true }
   },
   {
+  path: '/profile',
+  name: 'profile',
+  component: () => import('@/pages/management/ProfilePage.vue'),
+  meta: { requiresAuth: true } // Proteksi + konsistensi
+},
+  {
     path: '/register',
     name: 'Register',
     component: () => import('@/pages/auth/RegisterPage.vue'),
@@ -57,6 +63,7 @@ const routes = [
     component: () => import('@/pages/management/SalesPage.vue'),
     meta: { requiresAuth: true, permission: 'view sales' }
   },
+  
   {
   path: '/certificates',
   name: 'Certificates',

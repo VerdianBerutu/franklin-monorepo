@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-page p-6 bg-gray-50 min-h-screen">
+  <div class="dashboard-page p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -17,7 +17,7 @@
     </div>
 
     <!-- Stats Grid - 100% DINAMIS & REAL -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
       <!-- TOTAL CERTIFICATES -->
       <div v-permission="'view certificates'" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-4">
@@ -48,7 +48,7 @@
         </p>
         <div class="flex items-center text-green-600 text-sm mt-2">
           <i class="fas fa-arrow-up mr-1"></i>
-          <span>+8.2% vs last month</span>
+          <span>Real time update</span>
         </div>
       </div>
 
@@ -87,6 +87,9 @@
       </div>
     </div>
 
+      <div class="mt-12">
+      <TrendChart />
+    </div>
     <!-- Bagian lain (Quick Actions, Chart, dll) bisa kamu tambahkan nanti -->
     <!-- Untuk sekarang fokus ke stats dulu -->
   </div>
@@ -97,6 +100,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { usePermissions } from '@/composables/usePermissions'
 import axios from '@/plugins/axios'   // ini yang paling umum
 
+import TrendChart from '@/components/TrendChart.vue'
 const { hasRole } = usePermissions()
 
 // State stats

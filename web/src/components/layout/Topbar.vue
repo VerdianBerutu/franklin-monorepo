@@ -35,20 +35,14 @@
             </div>
 
             <!-- Menu Items -->
-            <div class="py-1">
-              <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                <i class="fas fa-user-edit w-5 text-gray-400"></i>
-                <span class="ml-3">Edit profile</span>
-              </a>
-              <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                <i class="fas fa-cog w-5 text-gray-400"></i>
-                <span class="ml-3">Account settings</span>
-              </a>
-              <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                <i class="fas fa-life-ring w-5 text-gray-400"></i>
-                <span class="ml-3">Support</span>
-              </a>
-            </div>
+            <router-link 
+           to="/profile" 
+           @click="isDropdownOpen = false"
+            class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+             <i class="fas fa-key w-5 text-gray-400"></i>
+              <span class="ml-3">Ganti Password</span>
+                </router-link>
 
             <!-- Sign Out -->
             <div class="border-t border-gray-100 pt-1">

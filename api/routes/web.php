@@ -61,7 +61,10 @@ Route::get('/test-product-model', function() {
         echo "<strong>Line:</strong> " . $e->getLine() . "<br>";
     }
 });
-
+// Route untuk halaman Edit Profile (Vue SPA)
+Route::get('/profile', function () {
+    return redirect(env('FRONTEND_URL', 'http://localhost:5173') . '/profile');
+})->name('profile.edit');
 // Tambahkan routes web lainnya di sini jika ada
 // Contoh:
 // Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth');
