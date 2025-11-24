@@ -18,11 +18,8 @@ class Certificate extends Model
         'expiry_date',
         'issuing_authority',
         'status',
-        'file_path',
-        'file_name',      // ✅ TAMBAHKAN
-        'file_size',      // ✅ TAMBAHKAN
-        'mime_type',      // ✅ TAMBAHKAN
-        'user_id'
+        'file_path',    // ✅ HANYA YANG ADA DI DATABASE
+        'user_id'       // ✅ HANYA YANG ADA DI DATABASE
     ];
 
     protected $casts = [
@@ -30,7 +27,8 @@ class Certificate extends Model
         'expiry_date' => 'date',
     ];
 
-   //rotected $appends = ['download_url']; // ✅ TAMBAHKAN
+    // ✅ CORRECT: Hapus appends untuk download_url jika tidak ada attribute-nya
+    // protected $appends = ['download_url'];
 
     // Relasi dengan user
     public function user()
@@ -50,13 +48,43 @@ class Certificate extends Model
         return $this->expiry_date && $this->expiry_date->isPast();
     }
 
-    // ✅ TAMBAHKAN: Get download URL
+    // ✅ CORRECT: Get download URL (accessor)
     public function getDownloadUrlAttribute()
     {
         return $this->file_path ? route('certificates.download', $this->id) : null;
     }
 
-    // ✅ TAMBAHKAN: Auto delete file when certificate deleted
+    // ✅ Accessor untuk file_name dari file_path
+    public function getFileNameAttribute()
+    {
+        return $this->file_path ? basename($this->file_path) : null;
+    }
+
+    // ✅ Accessor untuk file_size (jika perlu, dari storage)
+    public function getFileSizeAttribute()
+    {
+        if (!$this->file_path) return null;
+        
+        try {
+            return Storage::disk('public')->size($this->file_path);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    // ✅ Accessor untuk mime_type (jika perlu, dari storage)
+    public function getMimeTypeAttribute()
+    {
+        if (!$this->file_path) return null;
+        
+        try {
+            return Storage::disk('public')->mimeType($this->file_path);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    // ✅ Auto delete file when certificate deleted
     protected static function boot()
     {
         parent::boot();

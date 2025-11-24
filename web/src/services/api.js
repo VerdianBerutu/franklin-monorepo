@@ -5,18 +5,18 @@ import axios from 'axios'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
 // 2) instance axios dengan timeout
-export const api = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 20000,
   headers: {
     Accept: 'application/json',
-    // NOTE: jangan set Content-Type global; biarkan axios menentukan per request
   },
 })
 
 // 3) Request interceptor – selipkan token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
+  // ✅ FIXED: Try both token keys
+  const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -28,9 +28,8 @@ api.interceptors.response.use(
     const status = err?.response?.status
     if (status === 401) {
       localStorage.removeItem('auth_token')
+      localStorage.removeItem('token') // ✅ ADDED
       localStorage.removeItem('user')
-      // Jika mau pakai Vue Router:
-      // import router di sini (atau lempar event) lalu: router.replace({ name: 'login' })
       window.location.href = '/login'
     }
     return Promise.reject(err)
@@ -78,9 +77,7 @@ export const dashboardAPI = {
    Utilities (Export/Download)
 ======================= */
 
-// Contoh helper export (CSV/XLS/PDF)
 export const downloadAPI = {
-  // server harus kirim Content-Disposition: attachment; filename="..."
   getReport: async (path, params = {}, filename = 'report.xlsx') => {
     const res = await api.get(path, { params, responseType: 'blob' })
     const url = URL.createObjectURL(new Blob([res.data]))
@@ -94,4 +91,6 @@ export const downloadAPI = {
   }
 }
 
+// ✅ FIXED: Export both named and default
+export { api }
 export default api

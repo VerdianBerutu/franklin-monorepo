@@ -1,0 +1,24 @@
+<?php
+// database/migrations/[timestamp]_create_invoice_sequences_table.php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('invoice_sequences', function (Blueprint $table) {
+            $table->string('date')->primary(); // Format: YYYYMMDD
+            $table->unsignedInteger('last_number')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('invoice_sequences');
+    }
+};

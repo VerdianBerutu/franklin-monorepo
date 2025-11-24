@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\UploadController;
-use App\Http\Controllers\API\SaleController;
+use App\Http\Controllers\API\SalesController;
 use App\Http\Controllers\API\CertificateController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\UserController;
@@ -59,15 +59,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
     });
 
-    // SALES MANAGEMENT
-    Route::prefix('sales')->name('api.sales.')->group(function () {
-        Route::post('/export', [SaleController::class, 'export'])->name('export');
-        Route::get('/', [SaleController::class, 'index'])->name('index');
-        Route::post('/', [SaleController::class, 'store'])->name('store');
-        Route::get('/{sale}', [SaleController::class, 'show'])->name('show');
-        Route::put('/{sale}', [SaleController::class, 'update'])->name('update');
-        Route::delete('/{sale}', [SaleController::class, 'destroy'])->name('destroy');
-    });
+   // SALES MANAGEMENT
+Route::prefix('sales')->name('api.sales.')->group(function () {
+    //  ADD THIS LINE - Statistics route MUST come BEFORE {sale}
+    Route::get('/statistics', [SalesController::class, 'statistics'])->name('statistics');
+    
+    Route::post('/export', [SalesController::class, 'export'])->name('export');
+    Route::get('/', [SalesController::class, 'index'])->name('index');
+    Route::post('/', [SalesController::class, 'store'])->name('store');
+    Route::get('/{sale}', [SalesController::class, 'show'])->name('show');
+    Route::put('/{sale}', [SalesController::class, 'update'])->name('update');
+    Route::delete('/{sale}', [SalesController::class, 'destroy'])->name('destroy');
+    Route::get('/{sale}/print', [SalesController::class, 'printInvoice'])->name('sales.print');
+});
 
     // CERTIFICATES MANAGEMENT
     Route::prefix('certificates')->name('certificates.')->group(function () {
