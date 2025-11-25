@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // CUSTOMERS MANAGEMENT
+    Route::apiResource('customers', API\CustomerController::class);
     Route::prefix('customers')->name('api.customers.')->group(function () {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
         Route::post('/', [CustomerController::class, 'store'])->name('store');

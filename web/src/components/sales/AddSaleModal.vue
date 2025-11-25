@@ -1,5 +1,4 @@
 <template>
-  <!-- TEMPLATE TIDAK BERUBAH (tetap sama seperti punya Anda) -->
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl m-4 max-h-screen overflow-y-auto">
       <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
@@ -18,7 +17,7 @@
             <label class="block text-sm font-medium mb-2">Customer <span class="text-red-500">*</span></label>
             <select v-model="form.customer_id" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
               <option value="">Pilih Customer</option>
-              <option v-for="c in customers" :value="c.id">{{ c.name }}</option>
+              <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
           </div>
           <div>
@@ -35,7 +34,7 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-4 py-3 text-left">Produk</th>
-                  <th class="px-4 py-3 w-24">quantity</th>
+                  <th class="px-4 py-3 w-24">Qty</th>
                   <th class="px-4 py-3 w-32 text-right">Harga</th>
                   <th class="px-4 py-3 w-32 text-right">Subtotal</th>
                   <th class="px-4 py-3 w-20"></th>
@@ -46,17 +45,17 @@
                   <td class="px-4 py-3">
                     <select v-model="item.product_id" @change="updatePrice(index)" required class="w-full px-3 py-2 border rounded">
                       <option value="">Pilih Produk</option>
-                      <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                      <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
                     </select>
                   </td>
                   <td class="px-4 py-3">
-                    <input type="number" v-model.number="item.quantity" min="1" required class="w-full px-3 py-2 border rounded text-center">
+                    <input type="number" v-model.number="item.qty" min="1" required class="w-full px-3 py-2 border rounded text-center">
                   </td>
                   <td class="px-4 py-3 text-right font-medium">
                     Rp {{ formatRupiah(item.price) }}
                   </td>
                   <td class="px-4 py-3 text-right font-bold">
-                    Rp {{ formatRupiah(item.quantity * item.price) }}
+                    Rp {{ formatRupiah(item.qty * item.price) }}
                   </td>
                   <td class="px-4 py-3 text-center">
                     <button @click="removeItem(index)" class="text-red-600 hover:text-red-800">Remove</button>
@@ -64,7 +63,7 @@
                 </tr>
                 <tr>
                   <td colspan="5" class="px-4 py-4 text-left">
-                    <button @click="addItem" class="text-blue-600 font-medium hover:text-blue-800">
+                    <button @click="addItem" type="button" class="text-blue-600 font-medium hover:text-blue-800">
                       + Tambah Produk
                     </button>
                   </td>
@@ -112,10 +111,10 @@
 
         <!-- Tombol Aksi -->
         <div class="flex justify-end gap-4 pt-6 border-t">
-          <button @click="$emit('close')" class="px-8 py-3 border rounded-lg hover:bg-gray-100">Batal</button>
-          <button @click="submit" :disabled="!canSubmit" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
+          <button @click="$emit('close')" type="button" class="px-8 py-3 border rounded-lg hover:bg-gray-100">Batal</button>
+          <button @click="submit" :disabled="!canSubmit" type="button" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
             <i class="fas fa-save mr-2"></i>
-            Simpan Penjualan
+            {{ submitting ? 'Menyimpan...' : 'Simpan Penjualan' }}
           </button>
         </div>
       </div>
@@ -124,7 +123,6 @@
 </template>
 
 <script>
-// FIX: Gunakan saleService yang sudah diimport
 import { saleService } from '@/services/sale'
 
 export default {
@@ -146,24 +144,23 @@ export default {
   },
   computed: {
     subtotal() {
-      return this.form.items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
+      return this.form.items.reduce((sum, item) => sum + (item.qty * item.price), 0)
     },
     grandTotal() {
-      return this.subtotal + this.form.tax - this.form.discount
+      return this.subtotal + (this.form.tax || 0) - (this.form.discount || 0)
     },
     canSubmit() {
       return !this.submitting && 
              this.form.customer_id && 
              this.form.items.length > 0 && 
-             this.form.items.every(i => i.product_id && i.quantity > 0)
+             this.form.items.every(i => i.product_id && i.qty > 0 && i.price > 0)
     }
   },
   methods: {
     addItem() {
       this.form.items.push({ 
         product_id: '', 
-        product_name: '', // 🔥 TAMBAH: product_name
-        qty: 1, 
+        qty: 1,  // ✅ Konsisten pakai 'qty'
         price: 0 
       })
     },
@@ -173,49 +170,55 @@ export default {
     updatePrice(index) {
       const product = this.products.find(p => p.id === this.form.items[index].product_id)
       if (product) {
-        this.form.items[index].price = product.price
-        this.form.items[index].product_name = product.name // 🔥 TAMBAH: set product_name
+        this.form.items[index].price = parseFloat(product.price) || 0
       }
     },
     async submit() {
-      if (!this.canSubmit) return
+      if (!this.canSubmit) {
+        alert('Mohon lengkapi semua field yang diperlukan')
+        return
+      }
 
       this.submitting = true
       
       try {
-        // 🔥 FIX: Pastikan semua item punya product_name sebelum dikirim
+        // ✅ Data yang dikirim sudah sesuai dengan yang backend expect
         const submitData = {
-          ...this.form,
+          customer_id: this.form.customer_id,
+          sale_date: this.form.sale_date,
           items: this.form.items.map(item => ({
-            ...item,
-            product_name: item.product_name || this.getProductName(item.product_id)
-          }))
+            product_id: item.product_id,
+            qty: item.qty,  // ✅ Backend expect 'qty'
+            price: parseFloat(item.price) || 0
+          })),
+          tax: parseFloat(this.form.tax) || 0,
+          discount: parseFloat(this.form.discount) || 0,
+          payment_method: this.form.payment_method,
+          notes: this.form.notes || null
         }
         
-        console.log('🚀 Creating sale with data:', submitData)
+        console.log('🚀 Submitting sale data:', submitData)
         
-        // FIX: Gunakan saleService bukan axios langsung
         const response = await saleService.create(submitData)
         
         console.log('✅ Sale created successfully:', response.data)
+        
+        alert('Penjualan berhasil disimpan!')
+        
+        // ✅ Emit 'saved' agar parent component refresh data
         this.$emit('saved')
         this.$emit('close')
         this.resetForm()
-        alert('Penjualan berhasil disimpan!')
         
       } catch (error) {
         console.error('❌ Error saving sale:', error)
-        console.error('Error details:', error.response?.data)
+        console.error('Error response:', error.response?.data)
         
-        alert('Gagal menyimpan: ' + (error.response?.data?.message || error.message))
+        const errorMessage = error.response?.data?.message || error.message || 'Terjadi kesalahan'
+        alert('Gagal menyimpan penjualan: ' + errorMessage)
       } finally {
         this.submitting = false
       }
-    },
-    // 🔥 TAMBAH: Helper method untuk get product name
-    getProductName(productId) {
-      const product = this.products.find(p => p.id === productId)
-      return product ? product.name : ''
     },
     resetForm() {
       this.form = {
@@ -233,7 +236,14 @@ export default {
       return new Intl.NumberFormat('id-ID').format(angka || 0)
     }
   },
-  created() {
+  watch: {
+    isOpen(val) {
+      if (val && this.form.items.length === 0) {
+        this.addItem()
+      }
+    }
+  },
+  mounted() {
     this.addItem()
   }
 }

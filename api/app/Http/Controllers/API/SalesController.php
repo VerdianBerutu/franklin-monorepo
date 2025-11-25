@@ -138,7 +138,7 @@ class SalesController extends Controller
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'discount' => $discount,
-               'total_amount'   => $totalAmount,
+               'total' => $totalAmount,
                 'payment_status' => 'paid',
                 'payment_method' => $request->payment_method,
                 'notes' => $request->notes,
@@ -154,7 +154,7 @@ class SalesController extends Controller
             \Log::info('Sale created successfully:', [
                 'id' => $sale->id,
                 'invoice' => $sale->invoice_number,
-                'total' => $sale->total,
+               'total' => $sale->total,
                 'items' => $sale->items->count()
             ]);
 

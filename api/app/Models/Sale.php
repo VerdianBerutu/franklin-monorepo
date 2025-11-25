@@ -27,13 +27,10 @@ class Sale extends Model
         'user_id'
     ];
 
+    // ✅ CRITICAL FIX: Jangan cast ke decimal, pakai float
     protected $casts = [
-        'sale_date' => 'date',
-        'payment_date' => 'date',
-        'subtotal' => 'decimal:2',
-        'tax' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'total' => 'decimal:2',
+        'sale_date' => 'datetime',
+        'payment_date' => 'datetime',
     ];
 
     protected $appends = ['formatted_total', 'status_label'];
@@ -61,7 +58,8 @@ class Sale extends Model
      */
     public function getFormattedTotalAttribute()
     {
-        return 'Rp ' . number_format($this->total, 0, ',', '.');
+        $total = $this->attributes['total'] ?? 0;
+        return 'Rp ' . number_format($total, 0, ',', '.');
     }
 
     public function getStatusLabelAttribute()
@@ -94,9 +92,6 @@ class Sale extends Model
                      ->whereYear('sale_date', now()->year);
     }
 
-    /**
-     * Scope untuk search
-     */
     public function scopeSearch($query, $search)
     {
         if ($search) {
@@ -115,9 +110,6 @@ class Sale extends Model
         return $query;
     }
 
-    /**
-     * Scope untuk status filter
-     */
     public function scopeStatus($query, $status)
     {
         if ($status && $status !== 'all') {
@@ -126,9 +118,6 @@ class Sale extends Model
         return $query;
     }
 
-    /**
-     * Scope untuk date range filter
-     */
     public function scopeDateRange($query, $dateRange)
     {
         if ($dateRange) {
@@ -144,9 +133,6 @@ class Sale extends Model
         return $query;
     }
 
-    /**
-     * Scope untuk filter by customer
-     */
     public function scopeCustomer($query, $customerId)
     {
         if ($customerId) {
@@ -155,9 +141,6 @@ class Sale extends Model
         return $query;
     }
 
-    /**
-     * Scope untuk filter by date
-     */
     public function scopeDate($query, $date)
     {
         if ($date) {
@@ -202,17 +185,19 @@ class Sale extends Model
      */
     public function updatePaymentStatus()
     {
-        $totalPaid = $this->payments()->sum('amount');
-        
-        if ($totalPaid >= $this->total) {
-            $this->payment_status = 'paid';
-        } elseif ($totalPaid > 0) {
-            $this->payment_status = 'partial';
-        } else {
-            $this->payment_status = 'pending';
+        if (method_exists($this, 'payments')) {
+            $totalPaid = $this->payments()->sum('amount');
+            
+            if ($totalPaid >= $this->total) {
+                $this->payment_status = 'paid';
+            } elseif ($totalPaid > 0) {
+                $this->payment_status = 'partial';
+            } else {
+                $this->payment_status = 'pending';
+            }
+            
+            $this->save();
         }
-        
-        $this->save();
     }
 
     /**
@@ -237,12 +222,13 @@ class Sale extends Model
     }
 
     /**
-     * Boot method
+     * Boot method - SIMPLIFIED, NO OVERRIDE
      */
     protected static function boot()
     {
         parent::boot();
 
+        // ✅ HANYA set invoice_number dan sale_date jika kosong
         static::creating(function ($sale) {
             if (!$sale->invoice_number) {
                 $sale->invoice_number = self::generateInvoiceNumber();
@@ -250,6 +236,7 @@ class Sale extends Model
             if (!$sale->sale_date) {
                 $sale->sale_date = now();
             }
+            // ✅ JANGAN TOUCH TOTAL - BIARKAN CONTROLLER YANG SET
         });
 
         static::updating(function ($sale) {

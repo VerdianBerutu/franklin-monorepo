@@ -49,11 +49,13 @@
               {{ getProductNames(sale) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ formatCurrency(sale.total || sale.amount) }}
+              <!-- 🔥 PERBAIKAN: Gunakan sale.total saja, bukan sale.total || sale.amount -->
+              {{ formatCurrency(sale.total) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getStatusClass(sale.status)]">
-                {{ formatStatus(sale.status) }}
+              <!-- 🔥 PERBAIKAN: Gunakan sale.payment_status, bukan sale.status -->
+              <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getStatusClass(sale.payment_status)]">
+                {{ formatStatus(sale.payment_status) }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -178,8 +180,25 @@ const formatStatus = (status) => {
 }
 
 const getProductNames = (sale) => {
+  // 🔥 PERBAIKAN: Tambah debugging untuk memastikan data items ada
+  console.log('🔍 Sale data for product names:', {
+    id: sale.id,
+    invoice: sale.invoice_number,
+    items: sale.items,
+    hasItems: sale.items && Array.isArray(sale.items),
+    itemsCount: sale.items?.length || 0
+  })
+  
   if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
-    return sale.items.map(item => item.product_name || item.product?.name).join(', ')
+    const productNames = sale.items.map(item => {
+      console.log('📦 Item details:', {
+        product_name: item.product_name,
+        product: item.product,
+        product_name_final: item.product_name || item.product?.name
+      })
+      return item.product_name || item.product?.name || 'Unknown Product'
+    })
+    return productNames.join(', ')
   }
   return sale.product_name || sale.product?.name || '-'
 }

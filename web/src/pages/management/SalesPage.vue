@@ -21,7 +21,7 @@
       :isOpen="showAddModal"
       :customers="customers"
       :products="products"
-      @close="showAddModal = false"
+      @close="closeAddModal"
       @saved="handleSaleSaved"
     />
 
@@ -86,13 +86,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { saleService } from '@/services/sale'
+import { customersAPI, productsAPI } from '@/services/api'
 import AddSaleModal from '@/components/sales/AddSaleModal.vue'
 import SalesStats from '@/components/sales/SalesStats.vue'
 import SalesFilters from '@/components/sales/SalesFilters.vue'
 import SalesTable from '@/components/sales/SalesTable.vue'
-import { customersAPI, productsAPI } from '@/services/api'
-
-import axios from 'axios'
 
 // === STATE ===
 const sales = ref([])
@@ -138,6 +136,7 @@ const loadSales = async () => {
     if (res.data.success) {
       const data = res.data.data
       sales.value = Array.isArray(data) ? data : data.data || []
+
       Object.assign(pagination, {
         current_page: data.current_page || 1,
         last_page: data.last_page || 1,
@@ -165,158 +164,48 @@ const loadStatistics = async () => {
   }
 }
 
-// 🔥 FIX: LOAD MASTER DATA DENGAN DUMMY DATA YANG BENAR MAPPING
+// FUNGSI INI SUDAH 100% BERSIH — TIDAK ADA DUMMY LAGI!
 const loadMasterData = async () => {
   loadingMasterData.value = true
   try {
-    console.log('🔄 Trying to load master data from API...')
-    
-    // Coba load dari API dengan error handling
+    console.log('Loading master data (customers & products)...')
+
     const [custRes, prodRes] = await Promise.all([
-      axios.get('/api/customers').catch(err => {
-        console.warn('⚠️ Customers API not available, using dummy data')
-        return { data: { data: [] } }
-      }),
-      axios.get('/api/products').catch(err => {
-        console.warn('⚠️ Products API not available, using dummy data') 
-        return { data: { data: [] } }
-      })
+      customersAPI.getAll(),
+      productsAPI.getAll()
     ])
-    
-    // Cek jika API return data
-    customers.value = custRes.data.data || custRes.data || []
-    products.value = prodRes.data.data || prodRes.data || []
-    
-    // Jika masih kosong, pakai dummy data yang MATCH dengan database
-    if (customers.value.length === 0) {
-      console.log('📝 Using dummy customers data')
-      customers.value = [
-        { 
-          id: 1, 
-          name: 'John Doe', 
-          email: 'john@example.com', 
-          phone: '08123456789',
-          address: 'Jl. Contoh No. 123'
-        },
-        { 
-          id: 2, 
-          name: 'Jane Smith', 
-          email: 'jane@example.com', 
-          phone: '08129876543',
-          address: 'Jl. Demo No. 456'
-        },
-        { 
-          id: 3, 
-          name: 'PT. Contoh Jaya', 
-          email: 'info@contoh.com', 
-          phone: '021123456',
-          address: 'Jl. Perusahaan No. 789'
-        },
-        { 
-          id: 4, 
-          name: 'CV. Mandiri Sejahtera', 
-          email: 'sales@mandiri.com', 
-          phone: '021654321',
-          address: 'Jl. Industri No. 321'
-        }
-      ]
-    }
-    
-    if (products.value.length === 0) {
-      console.log('📝 Using CORRECTED dummy products data - MATCHED WITH DATABASE')
-      products.value = [
-        { 
-          id: 1, 
-          name: 'Laptop Dell XPS 13', // 🔥 MATCH DATABASE
-          price: 15000000, // 🔥 MATCH DATABASE
-          stock: 8, 
-          sku: 'PRO-001',
-          description: 'High performance laptop'
-        },
-        { 
-          id: 2, 
-          name: 'Office Chair Premium', // 🔥 MATCH DATABASE
-          price: 2500000, // 🔥 MATCH DATABASE
-          stock: 25, 
-          sku: 'PRO-002',
-          description: 'Ergonomic office chair'
-        },
-        { 
-          id: 3, 
-          name: 'Printer HP LaserJet', // 🔥 MATCH DATABASE
-          price: 3500000, // 🔥 MATCH DATABASE
-          stock: 15, 
-          sku: 'PRO-003',
-          description: 'Laser printer for office'
-        },
-        { 
-          id: 4, 
-          name: 'Whiteboard Magnetic 120x90cm', // 🔥 MATCH DATABASE - INI YANG BENAR!
-          price: 750000, // 🔥 MATCH DATABASE - INI YANG BENAR!
-          stock: 6, 
-          sku: 'WB-001',
-          description: 'Large magnetic whiteboard for meetings'
-        },
-        { 
-          id: 5, 
-          name: 'Projector Epson EB-X51', // 🔥 MATCH DATABASE
-          price: 8500000, // 🔥 MATCH DATABASE
-          stock: 3, 
-          sku: 'PRO-005',
-          description: 'HD projector for presentations'
-        },
-        { 
-          id: 6, 
-          name: 'Desk Table 140x70cm', // 🔥 MATCH DATABASE
-          price: 1800000, // 🔥 MATCH DATABASE
-          stock: 12, 
-          sku: 'PRO-006',
-          description: 'Modern office desk'
-        }
-      ]
-    }
-    
-    console.log('✅ Master data loaded successfully:')
-    console.log('📊 Customers:', customers.value.length, 'items')
-    console.log('📦 Products:', products.value.length, 'items')
-    console.log('🔍 Product ID 4:', products.value.find(p => p.id === 4)?.name) // Debug
-    
+
+    // Laravel paginate → data biasanya di .data.data.data
+    customers.value = custRes.data?.data?.data || custRes.data?.data || custRes.data || []
+    products.value  = prodRes.data?.data?.data || prodRes.data?.data || prodRes.data  || []
+
+    console.log('Master data loaded!', {
+      customers: customers.value.length,
+      products: products.value.length
+    })
   } catch (err) {
-    console.error('❌ Critical error loading master data:', err)
-    
-    // Fallback ke dummy data yang MATCH dengan database
-    console.log('🔄 Using CORRECTED fallback dummy data due to error')
-    customers.value = [
-      { id: 1, name: 'Customer Demo 1', email: 'demo1@example.com', phone: '0811111111' },
-      { id: 2, name: 'Customer Demo 2', email: 'demo2@example.com', phone: '0822222222' },
-      { id: 3, name: 'Customer Demo 3', email: 'demo3@example.com', phone: '0833333333' }
-    ]
-    
-    products.value = [
-      { id: 1, name: 'Laptop Dell XPS 13', price: 15000000, stock: 10, sku: 'DEMO-001' },
-      { id: 2, name: 'Office Chair Premium', price: 2500000, stock: 15, sku: 'DEMO-002' },
-      { id: 3, name: 'Printer HP LaserJet', price: 3500000, stock: 20, sku: 'DEMO-003' },
-      { id: 4, name: 'Whiteboard Magnetic 120x90cm', price: 750000, stock: 5, sku: 'DEMO-004' } // 🔥 CORRECT!
-    ]
-    
+    console.error('GAGAL load master data:', err.response || err)
+    customers.value = []
+    products.value = []
+    alert('Gagal memuat data Customer/Produk!\nPastikan Laravel backend sudah jalan.')
   } finally {
     loadingMasterData.value = false
-    console.log('🏁 Master data loading completed')
   }
 }
 
 // === ACTIONS ===
 const openAddModal = () => {
-  console.log('🎯 Opening add sale modal...')
-  console.log('📦 Available products:', products.value.map(p => ({ id: p.id, name: p.name }))) // Debug
+  console.log('Opening add sale modal...', { customers: customers.value.length, products: products.value.length })
   showAddModal.value = true
 }
 
-const handleSaleSaved = () => {
+const closeAddModal = () => {
   showAddModal.value = false
-  loadSales()
-  loadStatistics()
-  alert('Penjualan berhasil disimpan!')
+}
+
+const handleSaleSaved = async () => {
+  showAddModal.value = false
+  await Promise.all([loadSales(), loadStatistics()])
 }
 
 const handleFilter = () => {
@@ -328,7 +217,7 @@ const handleExport = async () => {
   try {
     await saleService.export(filters)
   } catch (err) {
-    alert('Export gagal!')
+    alert('Export gagal: ' + (err.response?.data?.message || err.message))
   }
 }
 
@@ -342,10 +231,9 @@ const handleDelete = async () => {
   try {
     await saleService.delete(deletingSale.value.id)
     alert('Penjualan berhasil dihapus!')
-    loadSales()
-    loadStatistics()
+    await Promise.all([loadSales(), loadStatistics()])
   } catch (err) {
-    alert('Gagal menghapus!')
+    alert('Gagal menghapus: ' + (err.response?.data?.message || err.message))
   } finally {
     deleting.value = false
     showDeleteModal.value = false
@@ -354,10 +242,10 @@ const handleDelete = async () => {
 }
 
 // === LIFECYCLE ===
-onMounted(() => {
-  console.log('🚀 SalesPage mounted, loading data...')
-  loadSales()
-  loadStatistics()
-  loadMasterData()
+onMounted(async () => {
+  console.log('SalesPage mounted - loading data...')
+  await loadMasterData()
+  await Promise.all([loadSales(), loadStatistics()])
+  console.log('Initial data loaded')
 })
 </script>
