@@ -1,20 +1,39 @@
 <template>
-  <div class="p-6">
-    <div class="flex justify-between items-center mb-6">
+  <div class="p-8">
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Customers Management</h1>
-        <p class="text-gray-600 mt-1">Kelola data pelanggan</p>
+        <p class="text-gray-600 text-sm mt-1">Kelola data pelanggan Anda</p>
       </div>
-      <button @click="openAddModal" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-        <i class="fas fa-plus"></i> Add Customer
+      <button @click="openAddModal" 
+              class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+        <i class="fas fa-plus"></i>
+        Add Customer
       </button>
     </div>
 
-    <AddCustomerModal :isOpen="showAddModal" @close="closeAddModal" @saved="handleSaved" />
-    <EditCustomerModal :isOpen="showEditModal" :customer="editingCustomer" @close="closeEditModal" @saved="handleSaved" />
+    <!-- Modals -->
+    <AddCustomerModal 
+      :isOpen="showAddModal" 
+      @close="closeAddModal" 
+      @saved="handleSaved" 
+    />
+    
+    <EditCustomerModal 
+      :isOpen="showEditModal" 
+      :customer="editingCustomer" 
+      @close="closeEditModal" 
+      @saved="handleSaved" 
+    />
 
-    <CustomersFilters v-model:search="filters.search" @filter="loadCustomers" />
+    <!-- Filters -->
+    <CustomersFilters 
+      v-model:search="filters.search" 
+      @filter="loadCustomers" 
+    />
 
+    <!-- Table -->
     <CustomersTable
       :customers="customers"
       :loading="loading"
@@ -24,25 +43,36 @@
       @page-change="page => { filters.page = page; loadCustomers() }"
     />
 
-    <!-- Delete Confirmation -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="showDeleteModal = false">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-8 text-center">
-        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <i class="fas fa-trash-alt text-red-600 text-3xl"></i>
-        </div>
-        <h3 class="text-2xl font-bold mb-3">Hapus Customer?</h3>
-        <p class="text-gray-600 mb-6">
-          Yakin ingin menghapus <strong>{{ deletingCustomer?.name }}</strong>?<br>
-          Customer yang sudah punya transaksi tidak akan terhapus permanen.
-        </p>
-        <div class="flex gap-4">
-          <button @click="showDeleteModal = false" class="flex-1 px-6 py-3 border rounded-lg hover:bg-gray-50">Batal</button>
-          <button @click="handleDelete" :disabled="deleting" class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-70">
-            {{ deleting ? 'Menghapus...' : 'Hapus' }}
-          </button>
+    <!-- Delete Confirmation Modal -->
+    <Teleport to="body">
+      <div v-if="showDeleteModal" 
+           class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" 
+           @click.self="showDeleteModal = false">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-8">
+          <div class="text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-trash-alt text-red-600 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Delete Customer?</h3>
+            <p class="text-gray-600 text-sm mb-6">
+              Are you sure you want to delete <strong>{{ deletingCustomer?.name }}</strong>?<br>
+              <span class="text-xs text-gray-500">This action cannot be undone.</span>
+            </p>
+            <div class="flex gap-3">
+              <button @click="showDeleteModal = false" 
+                      class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button @click="handleDelete" 
+                      :disabled="deleting" 
+                      class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {{ deleting ? 'Deleting...' : 'Delete' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -90,7 +120,7 @@ const loadCustomers = async () => {
     }
   } catch (err) {
     console.error(err)
-    alert('Gagal memuat data customer')
+    alert('Failed to load customers')
   } finally {
     loading.value = false
   }
@@ -98,31 +128,36 @@ const loadCustomers = async () => {
 
 const openAddModal = () => showAddModal.value = true
 const closeAddModal = () => showAddModal.value = false
+
 const openEditModal = (cust) => {
   editingCustomer.value = cust
   showEditModal.value = true
 }
+
 const closeEditModal = () => {
   editingCustomer.value = null
   showEditModal.value = false
 }
+
 const handleSaved = () => {
   closeAddModal()
   closeEditModal()
   loadCustomers()
 }
+
 const confirmDelete = (cust) => {
   deletingCustomer.value = cust
   showDeleteModal.value = true
 }
+
 const handleDelete = async () => {
   deleting.value = true
   try {
     await customerService.delete(deletingCustomer.value.id)
-    alert('Customer berhasil dihapus!')
+    alert('Customer deleted successfully!')
     loadCustomers()
   } catch (err) {
-    alert('Gagal menghapus: ' + (err.response?.data?.message || err.message))
+    alert('Failed to delete: ' + (err.response?.data?.message || err.message))
   } finally {
     deleting.value = false
     showDeleteModal.value = false

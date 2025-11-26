@@ -25,11 +25,32 @@ class Customer extends Model
         'user_id'
     ];
 
+    /**
+     * ✅ TAMBAHAN: Boot method - Auto set user_id saat create
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-fill user_id dari user yang login
+        static::creating(function ($customer) {
+            if (!$customer->user_id) {
+                $customer->user_id = auth()->id();
+            }
+        });
+    }
+
+    /**
+     * Relationship: Customer belongs to User
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Relationship: Customer has many Sales
+     */
     public function sales()
     {
         return $this->hasMany(Sale::class);
