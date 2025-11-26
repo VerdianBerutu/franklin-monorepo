@@ -1,17 +1,42 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
-  //  ROOT ROUTE - Redirect berdasarkan auth status
+  // ROOT ROUTE - Redirect berdasarkan permission
   {
     path: '/',
-    redirect: (to) => {
+    redirect: () => {
       const token = localStorage.getItem('auth_token')
-      const user = localStorage.getItem('user')
-      const isLoggedIn = !!(token && user)
+      const userStr = localStorage.getItem('user')
       
-      return isLoggedIn ? '/dashboard' : '/login'
+      if (!token || !userStr) {
+        return '/login'
+      }
+      
+      try {
+        const user = JSON.parse(userStr)
+        
+        // ✅ FIX: Redirect berdasarkan permission yang user punya
+        if (user.permissions?.includes('view dashboard')) {
+          return '/dashboard'
+        } else if (user.permissions?.includes('view certificates')) {
+          return '/certificates'
+        } else if (user.permissions?.includes('view products')) {
+          return '/products'
+        } else if (user.permissions?.includes('view customers')) {
+          return '/customers'
+        } else if (user.permissions?.includes('view sales')) {
+          return '/sales'
+        }
+        
+        // Jika tidak punya permission apapun, logout
+        return '/login'
+      } catch (e) {
+        console.error('Error parsing user:', e)
+        return '/login'
+      }
     }
   },
+
   // Auth Routes
   {
     path: '/login',
@@ -20,17 +45,18 @@ const routes = [
     meta: { requiresGuest: true }
   },
   {
-  path: '/profile',
-  name: 'profile',
-  component: () => import('@/pages/management/ProfilePage.vue'),
-  meta: { requiresAuth: true } // Proteksi + konsistensi
-},
-  {
     path: '/register',
     name: 'Register',
     component: () => import('@/pages/auth/RegisterPage.vue'),
     meta: { requiresGuest: true }
   },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/pages/management/ProfilePage.vue'),
+    meta: { requiresAuth: true }
+  },
+
   // Dashboard
   {
     path: '/dashboard',
@@ -38,6 +64,7 @@ const routes = [
     component: () => import('@/pages/auth/DashboardPage.vue'), 
     meta: { requiresAuth: true, permission: 'view dashboard' }
   },
+
   // Management Routes
   {
     path: '/users',
@@ -63,24 +90,18 @@ const routes = [
     component: () => import('@/pages/management/SalesPage.vue'),
     meta: { requiresAuth: true, permission: 'view sales' }
   },
-  
   {
-  path: '/certificates',
-  name: 'Certificates',
-  component: () => import('@/pages/management/CertificatesPage.vue'),
-  meta: { requiresAuth: true, permission: 'view certificates' }
-},
-  //  TAMBAHKAN: 404 Catch-all route
+    path: '/certificates',
+    name: 'Certificates',
+    component: () => import('@/pages/management/CertificatesPage.vue'),
+    meta: { requiresAuth: true, permission: 'view certificates' }
+  },
+
+  // 404 Catch-all route
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: (to) => {
-      const token = localStorage.getItem('auth_token')
-      const user = localStorage.getItem('user')
-      const isLoggedIn = !!(token && user)
-      
-      return isLoggedIn ? '/dashboard' : '/login'
-    }
+    redirect: '/'
   }
 ]
 
@@ -89,9 +110,30 @@ const router = createRouter({
   routes
 })
 
-//  NAVIGATION GUARD YANG DIPERBAIKI
+// Helper function untuk redirect ke halaman yang user bisa akses
+function getDefaultRouteForUser(user) {
+  if (!user || !user.permissions) {
+    return '/login'
+  }
+
+  // Priority order: dashboard > certificates > products > customers > sales
+  if (user.permissions.includes('view dashboard')) {
+    return '/dashboard'
+  } else if (user.permissions.includes('view certificates')) {
+    return '/certificates'
+  } else if (user.permissions.includes('view products')) {
+    return '/products'
+  } else if (user.permissions.includes('view customers')) {
+    return '/customers'
+  } else if (user.permissions.includes('view sales')) {
+    return '/sales'
+  }
+
+  return '/login'
+}
+
+// NAVIGATION GUARD
 router.beforeEach((to, from, next) => {
-  // 🔍 Logging untuk debugging
   console.log('🔒 Router Guard:', {
     to: to.path,
     from: from.path,
@@ -99,63 +141,76 @@ router.beforeEach((to, from, next) => {
     requiresGuest: to.meta.requiresGuest
   })
 
-  // 1️ Ambil data auth dari localStorage
+  // 1. Ambil data auth dari localStorage
   const token = localStorage.getItem('auth_token')
   const userStr = localStorage.getItem('user')
   
-  // 2️ Parse user data dengan error handling
+  // 2. Parse user data dengan error handling
   let user = null
   try {
     user = userStr ? JSON.parse(userStr) : null
   } catch (e) {
     console.error('❌ Error parsing user data:', e)
-    // Clear corrupted data
     localStorage.removeItem('user')
     localStorage.removeItem('auth_token')
   }
   
-  // 3️ Check auth status
+  // 3. Check auth status
   const isLoggedIn = !!(token && user)
   
   console.log('Auth Status:', {
     hasToken: !!token,
     hasUser: !!user,
-    isLoggedIn
+    isLoggedIn,
+    permissions: user?.permissions || []
   })
 
-  // 4️ HANDLE ROUTES YANG BUTUH AUTH
+  // 4. HANDLE ROUTES YANG BUTUH AUTH
   if (to.meta.requiresAuth) {
     if (!isLoggedIn) {
       console.log('❌ Not authenticated, redirecting to login')
       next({
         path: '/login',
-        query: { redirect: to.fullPath } //  Save intended destination
+        query: { redirect: to.fullPath }
       })
       return
     }
     
-    //  OPTIONAL: Check permission
+    // ✅ FIX: Check permission dengan redirect yang benar
     if (to.meta.permission && user.permissions) {
       const hasPermission = user.permissions.includes(to.meta.permission)
       
       if (!hasPermission) {
         console.log('❌ No permission for:', to.meta.permission)
-        // Redirect ke dashboard jika tidak ada permission
-        next('/dashboard')
+        
+        // ✅ FIX: Redirect ke halaman yang user BISA akses
+        const defaultRoute = getDefaultRouteForUser(user)
+        
+        // Prevent infinite loop
+        if (to.path === defaultRoute) {
+          console.error('⚠️ Circular redirect detected, logging out')
+          localStorage.removeItem('user')
+          localStorage.removeItem('auth_token')
+          next('/login')
+          return
+        }
+        
+        next(defaultRoute)
         return
       }
     }
     
-    console.log(' Authenticated, allowing access')
+    console.log('✅ Authenticated, allowing access')
     next()
     return
   }
   
-  // 5️ HANDLE GUEST ROUTES (login, register)
+  // 5. HANDLE GUEST ROUTES (login, register)
   if (to.meta.requiresGuest) {
     if (isLoggedIn) {
-      console.log(' Already authenticated, redirecting to dashboard')
-      next('/dashboard')
+      console.log('✅ Already authenticated, redirecting to default route')
+      const defaultRoute = getDefaultRouteForUser(user)
+      next(defaultRoute)
       return
     }
     console.log('✅ Guest route, allowing access')
@@ -163,12 +218,12 @@ router.beforeEach((to, from, next) => {
     return
   }
   
-  // 6️⃣ PUBLIC ROUTES
-  console.log(' Public route, allowing access')
+  // 6. PUBLIC ROUTES
+  console.log('✅ Public route, allowing access')
   next()
 })
 
-//  OPTIONAL: Handle navigation errors
+// Handle navigation errors
 router.onError((error) => {
   console.error('❌ Router Navigation Error:', error)
 })
