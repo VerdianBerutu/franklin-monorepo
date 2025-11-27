@@ -14,9 +14,6 @@ class CustomerController extends Controller
     {
         $query = Customer::query();
 
-        // ✅ TAMBAHAN: Filter hanya customer milik user yang login
-        $query->where('user_id', auth()->id());
-
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -38,20 +35,20 @@ class CustomerController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'email'       => 'nullable|email|unique:customers,email',
-            'phone'       => 'nullable|string|max:20',
-            'company'     => 'nullable|string|max:255',
-            'address'     => 'nullable|string',
-            'city'        => 'nullable|string',
-            'state'       => 'nullable|string',
+            'name'     => 'required|string|max:255',
+            'email'    => 'nullable|email|unique:customers,email',
+            'phone'    => 'nullable|string|max:20',
+            'company'  => 'nullable|string|max:255',
+            'address'  => 'nullable|string',
+            'city'     => 'nullable|string',
+            'state'    => 'nullable|string',
             'postal_code' => 'nullable|string',
-            'country'     => 'nullable|string',
-            'type'        => 'nullable|in:individual,company',
-            'notes'       => 'nullable|string',
+            'country'  => 'nullable|string',
+            'type'     => 'nullable|in:individual,company',
+            'notes'    => 'nullable|string',
         ]);
 
-        // ✅ FIX: Auto set user_id dari user yang login
+        // TAMBAHKAN USER_ID SECARA OTOMATIS
         $validated['user_id'] = auth()->id();
 
         $customer = Customer::create($validated);
@@ -65,14 +62,6 @@ class CustomerController extends Controller
 
     public function show(Customer $customer): JsonResponse
     {
-        // ✅ TAMBAHAN: Cek apakah customer milik user yang login
-        if ($customer->user_id !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
-        }
-
         return response()->json([
             'success' => true,
             'data'    => $customer->load('user')
@@ -81,29 +70,19 @@ class CustomerController extends Controller
 
     public function update(Request $request, Customer $customer): JsonResponse
     {
-        // ✅ TAMBAHAN: Cek apakah customer milik user yang login
-        if ($customer->user_id !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
-        }
-
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'email'       => ['nullable', 'email', Rule::unique('customers')->ignore($customer->id)],
-            'phone'       => 'nullable|string|max:20',
-            'company'     => 'nullable|string|max:255',
-            'address'     => 'nullable|string',
-            'city'        => 'nullable|string',
-            'state'       => 'nullable|string',
+            'name'     => 'required|string|max:255',
+            'email'    => ['nullable', 'email', Rule::unique('customers')->ignore($customer->id)],
+            'phone'    => 'nullable|string|max:20',
+            'company'  => 'nullable|string|max:255',
+            'address'  => 'nullable|string',
+            'city'     => 'nullable|string',
+            'state'    => 'nullable|string',
             'postal_code' => 'nullable|string',
-            'country'     => 'nullable|string',
-            'type'        => 'nullable|in:individual,company',
-            'notes'       => 'nullable|string',
+            'country'  => 'nullable|string',
+            'type'     => 'nullable|in:individual,company',
+            'notes'    => 'nullable|string',
         ]);
-
-        // user_id tidak perlu diupdate, jadi tidak ada dalam validation
 
         $customer->update($validated);
 
@@ -116,14 +95,6 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): JsonResponse
     {
-        // ✅ TAMBAHAN: Cek apakah customer milik user yang login
-        if ($customer->user_id !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
-        }
-
         $customer->delete();
 
         return response()->json([
