@@ -3,39 +3,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   // ROOT ROUTE - Redirect berdasarkan permission
   {
-    path: '/',
-    redirect: () => {
-      const token = localStorage.getItem('auth_token')
-      const userStr = localStorage.getItem('user')
-      
-      if (!token || !userStr) {
-        return '/login'
-      }
-      
-      try {
-        const user = JSON.parse(userStr)
-        
-        // ✅ FIX: Redirect berdasarkan permission yang user punya
-        if (user.permissions?.includes('view dashboard')) {
-          return '/dashboard'
-        } else if (user.permissions?.includes('view certificates')) {
-          return '/certificates'
-        } else if (user.permissions?.includes('view products')) {
-          return '/products'
-        } else if (user.permissions?.includes('view customers')) {
-          return '/customers'
-        } else if (user.permissions?.includes('view sales')) {
-          return '/sales'
-        }
-        
-        // Jika tidak punya permission apapun, logout
-        return '/login'
-      } catch (e) {
-        console.error('Error parsing user:', e)
-        return '/login'
-      }
-    }
-  },
+  path: '/',
+  redirect: '/dashboard' // ✅ Simple redirect
+},
 
   // Auth Routes
   {
@@ -101,7 +71,7 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: '/'
+    redirect: '/dashboard'
   }
 ]
 
@@ -113,7 +83,7 @@ const router = createRouter({
 // Helper function untuk redirect ke halaman yang user bisa akses
 function getDefaultRouteForUser(user) {
   if (!user || !user.permissions) {
-    return '/login'
+     return '/dashboard'
   }
 
   // Priority order: dashboard > certificates > products > customers > sales
@@ -129,7 +99,7 @@ function getDefaultRouteForUser(user) {
     return '/sales'
   }
 
-  return '/login'
+   return '/dashboard'
 }
 
 // NAVIGATION GUARD
@@ -176,14 +146,14 @@ router.beforeEach((to, from, next) => {
       return
     }
     
-    // ✅ FIX: Check permission dengan redirect yang benar
+    //  FIX: Check permission dengan redirect yang benar
     if (to.meta.permission && user.permissions) {
       const hasPermission = user.permissions.includes(to.meta.permission)
       
       if (!hasPermission) {
         console.log('❌ No permission for:', to.meta.permission)
         
-        // ✅ FIX: Redirect ke halaman yang user BISA akses
+        //  FIX: Redirect ke halaman yang user BISA akses
         const defaultRoute = getDefaultRouteForUser(user)
         
         // Prevent infinite loop
@@ -200,7 +170,7 @@ router.beforeEach((to, from, next) => {
       }
     }
     
-    console.log('✅ Authenticated, allowing access')
+    console.log(' Authenticated, allowing access')
     next()
     return
   }
@@ -208,14 +178,14 @@ router.beforeEach((to, from, next) => {
   // 5. HANDLE GUEST ROUTES (login, register)
   if (to.meta.requiresGuest) {
     if (isLoggedIn) {
-      console.log('✅ Already authenticated, redirecting to default route')
+      console.log(' Already authenticated, redirecting to default route')
       const defaultRoute = getDefaultRouteForUser(user)
       next(defaultRoute)
       return
     }
-    console.log('✅ Guest route, allowing access')
+    console.log(' Guest route, allowing access')
     next()
-    return
+    return  
   }
   
   // 6. PUBLIC ROUTES

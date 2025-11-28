@@ -16,7 +16,7 @@ class DashboardController extends Controller
                 'total_users'        => DB::table('users')->count(),
                 'total_certificates' => DB::table('certificates')->count(),
                 'total_products'     => DB::table('uploads')->count(),
-                'total_customers'    => DB::table('customers')->count(), // KEMUNGKINAN BESAR INI YANG BENAR!
+               'total_customers'    => \App\Models\Customer::count(), // KEMUNGKINAN BESAR INI YANG BENAR!
             ];
 
             return response()->json([
